@@ -23,17 +23,17 @@ class zulip::smokescreen {
       Zulip::External_Dep['smokescreen-src'],
     ],
   }
-  # This resource exists purely so it doesn't get tidied; it is
-  # created by the 'compile smokescreen' step.
+  # This resource is created by the 'compile smokescreen' step.
   file { $bin:
     ensure  => file,
     require => Exec['compile smokescreen'],
   }
-  tidy { '/usr/local/bin/smokescreen-*':
-    path    => '/usr/local/bin',
-    recurse => 1,
-    matches => 'smokescreen-*',
-    require => Exec['compile smokescreen'],
+  exec { 'Cleanup smokescreen':
+    refreshonly => true,
+    provider    => shell,
+    onlyif      => "ls /usr/local/bin/smokescreen-* | grep -xv '${bin}'",
+    command     => "ls /usr/local/bin/smokescreen-* | grep -xv '${bin}' | xargs rm -r",
+    require     => [File[$bin], Service[supervisor]],
   }
 
   $listen_address = zulipconf('http_proxy', 'listen_address', '127.0.0.1')
@@ -48,5 +48,13 @@ class zulip::smokescreen {
     mode    => '0644',
     content => template('zulip/supervisor/smokescreen.conf.erb'),
     notify  => Service[supervisor],
+  }
+
+  file { '/etc/logrotate.d/smokescreen':
+    ensure => file,
+    owner  => 'root',
+    group  => 'root',
+    mode   => '0644',
+    source => 'puppet:///modules/zulip/logrotate/smokescreen',
   }
 }

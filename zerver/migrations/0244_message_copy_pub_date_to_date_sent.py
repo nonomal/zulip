@@ -2,7 +2,7 @@ import time
 
 from django.contrib.postgres.operations import AddIndexConcurrently
 from django.db import connection, migrations, models
-from django.db.backends.postgresql.schema import DatabaseSchemaEditor
+from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.db.migrations.state import StateApps
 from django.db.models import Min
 from psycopg2.sql import SQL
@@ -28,7 +28,7 @@ def sql_copy_pub_date_to_date_sent(id_range_lower_bound: int, id_range_upper_bou
         )
 
 
-def copy_pub_date_to_date_sent(apps: StateApps, schema_editor: DatabaseSchemaEditor) -> None:
+def copy_pub_date_to_date_sent(apps: StateApps, schema_editor: BaseDatabaseSchemaEditor) -> None:
     Message = apps.get_model("zerver", "Message")
     if not Message.objects.exists():
         # Nothing to do
@@ -79,8 +79,19 @@ class Migration(migrations.Migration):
         """
         ),
         migrations.RunPython(copy_pub_date_to_date_sent, elidable=True),
-        AddIndexConcurrently(
-            model_name="message",
-            index=models.Index("date_sent", name="zerver_message_date_sent_3b5b05d8"),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                AddIndexConcurrently(
+                    model_name="message",
+                    index=models.Index("date_sent", name="zerver_message_date_sent_3b5b05d8"),
+                ),
+            ],
+            state_operations=[
+                migrations.AlterField(
+                    model_name="message",
+                    name="date_sent",
+                    field=models.DateTimeField(db_index=True, null=True, verbose_name="date sent"),
+                ),
+            ],
         ),
     ]

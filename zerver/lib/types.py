@@ -1,45 +1,56 @@
-import datetime
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import IntEnum
+from typing import Any, TypeAlias, TypeVar
 
-from django.http import HttpResponse
-from django.utils.functional import Promise
+from django_stubs_ext import StrPromise
 from typing_extensions import NotRequired, TypedDict
-
-ViewFuncT = TypeVar("ViewFuncT", bound=Callable[..., HttpResponse])
 
 # See zerver/lib/validator.py for more details of Validators,
 # including many examples
 ResultT = TypeVar("ResultT")
-Validator = Callable[[str, object], ResultT]
-ExtendedValidator = Callable[[str, str, object], str]
-RealmUserValidator = Callable[[int, object, bool], List[int]]
+Validator: TypeAlias = Callable[[str, object], ResultT]
+ExtendedValidator: TypeAlias = Callable[[str, str, object], str]
+RealmUserValidator: TypeAlias = Callable[[int, object, bool], list[int]]
 
 
-ProfileDataElementValue = Union[str, List[int]]
+ProfileDataElementValue: TypeAlias = str | list[int]
 
 
-class ProfileDataElementBase(TypedDict):
+class ProfileDataElementBase(TypedDict, total=False):
     id: int
     name: str
     type: int
-    hint: Optional[str]
-    field_data: Optional[str]
+    hint: str
+    display_in_profile_summary: bool
+    required: bool
+    editable_by_user: bool
+    field_data: str
     order: int
 
 
 class ProfileDataElement(ProfileDataElementBase):
+    value: ProfileDataElementValue | None
+    rendered_value: str | None
+
+
+class ProfileDataElementUpdateDict(TypedDict):
+    id: int
     value: ProfileDataElementValue
-    rendered_value: Optional[str]
 
 
-ProfileData = List[ProfileDataElement]
+ProfileData: TypeAlias = list[ProfileDataElement]
 
-FieldElement = Tuple[int, Promise, Validator[ProfileDataElementValue], Callable[[Any], Any], str]
-ExtendedFieldElement = Tuple[int, Promise, ExtendedValidator, Callable[[Any], Any], str]
-UserFieldElement = Tuple[int, Promise, RealmUserValidator, Callable[[Any], Any], str]
+FieldElement: TypeAlias = tuple[
+    int, StrPromise, Validator[ProfileDataElementValue], Callable[[Any], Any], str
+]
+ExtendedFieldElement: TypeAlias = tuple[
+    int, StrPromise, ExtendedValidator, Callable[[Any], Any], str
+]
+UserFieldElement: TypeAlias = tuple[int, StrPromise, RealmUserValidator, Callable[[Any], Any], str]
 
-ProfileFieldData = Dict[str, Union[Dict[str, str], str]]
+ProfileFieldData: TypeAlias = dict[str, dict[str, str] | str]
 
 
 class UserDisplayRecipient(TypedDict):
@@ -49,34 +60,16 @@ class UserDisplayRecipient(TypedDict):
     is_mirror_dummy: bool
 
 
-DisplayRecipientT = Union[str, List[UserDisplayRecipient]]
+DisplayRecipientT: TypeAlias = str | list[UserDisplayRecipient]
 
 
 class LinkifierDict(TypedDict):
     pattern: str
-    url_format: str
+    url_template: str
     id: int
 
 
-class SAMLIdPConfigDict(TypedDict, total=False):
-    entity_id: str
-    url: str
-    slo_url: str
-    attr_user_permanent_id: str
-    attr_first_name: str
-    attr_last_name: str
-    attr_username: str
-    attr_email: str
-    attr_org_membership: str
-    display_name: str
-    display_icon: str
-    limit_to_subdomains: List[str]
-    extra_attrs: List[str]
-    x509cert: str
-    x509cert_path: str
-
-
-class UnspecifiedValue:
+class Unset:
     """In most API endpoints, we use a default value of `None"` to encode
     parameters that the client did not pass, which is nicely Pythonic.
 
@@ -87,10 +80,11 @@ class UnspecifiedValue:
     We use this type as an explicit sentinel value for such endpoints.
 
     TODO: Can this be merged with the _NotSpecified class, which is
-    currently an internal implementation detail of the REQ class?
+    currently an internal implementation detail of the typed_endpoint?
     """
 
-    pass
+
+UNSET = Unset()
 
 
 class EditHistoryEvent(TypedDict, total=False):
@@ -102,15 +96,15 @@ class EditHistoryEvent(TypedDict, total=False):
     # predating March 2017, when we started tracking the person who
     # made edits, which is still years after the introduction of topic
     # editing support in Zulip.
-    user_id: Optional[int]
+    user_id: int | None
     timestamp: int
     prev_stream: int
     stream: int
     prev_topic: str
     topic: str
     prev_content: str
-    prev_rendered_content: Optional[str]
-    prev_rendered_content_version: Optional[int]
+    prev_rendered_content: str | None
+    prev_rendered_content_version: int | None
 
 
 class FormattedEditHistoryEvent(TypedDict, total=False):
@@ -119,7 +113,7 @@ class FormattedEditHistoryEvent(TypedDict, total=False):
     """
 
     # See EditHistoryEvent for details on when this can be null.
-    user_id: Optional[int]
+    user_id: int | None
     timestamp: int
     prev_stream: int
     stream: int
@@ -127,9 +121,27 @@ class FormattedEditHistoryEvent(TypedDict, total=False):
     topic: str
     prev_content: str
     content: str
-    prev_rendered_content: Optional[str]
-    rendered_content: Optional[str]
+    prev_rendered_content: str | None
+    rendered_content: str | None
     content_html_diff: str
+
+
+class UserTopicDict(TypedDict, total=False):
+    """Dictionary containing fields fetched from the UserTopic model that
+    are needed to encode the UserTopic object for the API.
+    """
+
+    stream_id: int
+    stream__name: str
+    topic_name: str
+    last_updated: int
+    visibility_policy: int
+
+
+@dataclass
+class AnonymousSettingGroupDict:
+    direct_members: list[int]
+    direct_subgroups: list[int]
 
 
 # This next batch of types is for Stream/Subscription objects.
@@ -138,15 +150,20 @@ class RawStreamDict(TypedDict):
     are needed to encode the stream for the API.
     """
 
-    date_created: datetime.datetime
+    can_administer_channel_group_id: int
+    can_send_message_group_id: int
+    can_remove_subscribers_group_id: int
+    creator_id: int | None
+    date_created: datetime
+    deactivated: bool
     description: str
-    email_token: str
-    first_message_id: Optional[int]
+    first_message_id: int | None
+    is_recently_active: bool
     history_public_to_subscribers: bool
     id: int
-    invite_only: Optional[bool]
+    invite_only: bool
     is_web_public: bool
-    message_retention_days: Optional[int]
+    message_retention_days: int | None
     name: str
     rendered_description: str
     stream_post_policy: int
@@ -158,16 +175,15 @@ class RawSubscriptionDict(TypedDict):
     """
 
     active: bool
-    audible_notifications: Optional[bool]
+    audible_notifications: bool | None
     color: str
-    desktop_notifications: Optional[bool]
-    email_notifications: Optional[bool]
-    is_muted: Optional[bool]
+    desktop_notifications: bool | None
+    email_notifications: bool | None
+    is_muted: bool
     pin_to_top: bool
-    push_notifications: Optional[bool]
+    push_notifications: bool | None
     recipient_id: int
-    role: int
-    wildcard_mentions_notify: Optional[bool]
+    wildcard_mentions_notify: bool | None
 
 
 class SubscriptionStreamDict(TypedDict):
@@ -177,53 +193,168 @@ class SubscriptionStreamDict(TypedDict):
     computed fields.
     """
 
-    audible_notifications: Optional[bool]
+    audible_notifications: bool | None
+    can_administer_channel_group: int | AnonymousSettingGroupDict
+    can_send_message_group: int | AnonymousSettingGroupDict
+    can_remove_subscribers_group: int | AnonymousSettingGroupDict
     color: str
+    creator_id: int | None
     date_created: int
     description: str
-    desktop_notifications: Optional[bool]
-    email_address: str
-    email_notifications: Optional[bool]
-    first_message_id: Optional[int]
+    desktop_notifications: bool | None
+    email_notifications: bool | None
+    first_message_id: int | None
+    is_recently_active: bool
     history_public_to_subscribers: bool
-    in_home_view: Optional[bool]
-    # Bug: invite_only should be bool.
-    invite_only: Optional[bool]
+    in_home_view: bool
+    invite_only: bool
     is_announcement_only: bool
-    is_muted: Optional[bool]
+    is_archived: bool
+    is_muted: bool
     is_web_public: bool
-    message_retention_days: Optional[int]
+    message_retention_days: int | None
     name: str
     pin_to_top: bool
-    push_notifications: Optional[bool]
+    push_notifications: bool | None
     rendered_description: str
-    role: int
     stream_id: int
     stream_post_policy: int
-    stream_weekly_traffic: Optional[int]
-    subscribers: NotRequired[List[int]]
-    wildcard_mentions_notify: Optional[bool]
+    stream_weekly_traffic: int | None
+    subscribers: NotRequired[list[int]]
+    wildcard_mentions_notify: bool | None
 
 
 class NeverSubscribedStreamDict(TypedDict):
+    is_archived: bool
+    can_administer_channel_group: int | AnonymousSettingGroupDict
+    can_send_message_group: int | AnonymousSettingGroupDict
+    can_remove_subscribers_group: int | AnonymousSettingGroupDict
+    creator_id: int | None
     date_created: int
     description: str
-    first_message_id: Optional[int]
+    first_message_id: int | None
+    is_recently_active: bool
     history_public_to_subscribers: bool
-    invite_only: Optional[bool]
+    invite_only: bool
     is_announcement_only: bool
     is_web_public: bool
-    message_retention_days: Optional[int]
+    message_retention_days: int | None
     name: str
     rendered_description: str
     stream_id: int
     stream_post_policy: int
-    stream_weekly_traffic: Optional[int]
-    subscribers: NotRequired[List[int]]
+    stream_weekly_traffic: int | None
+    subscribers: NotRequired[list[int]]
+
+
+class DefaultStreamDict(TypedDict):
+    """Stream information provided to Zulip clients as a dictionary via API.
+    It should contain all the fields specified in `zerver.models.Stream.API_FIELDS`
+    with few exceptions and possible additional fields.
+    """
+
+    is_archived: bool
+    can_administer_channel_group: int | AnonymousSettingGroupDict
+    can_send_message_group: int | AnonymousSettingGroupDict
+    can_remove_subscribers_group: int | AnonymousSettingGroupDict
+    creator_id: int | None
+    date_created: int
+    description: str
+    first_message_id: int | None
+    is_recently_active: bool
+    history_public_to_subscribers: bool
+    invite_only: bool
+    is_web_public: bool
+    message_retention_days: int | None
+    name: str
+    rendered_description: str
+    stream_id: int  # `stream_id`` represents `id` of the `Stream` object in `API_FIELDS`
+    stream_post_policy: int
+    # Computed fields not specified in `Stream.API_FIELDS`
+    is_announcement_only: bool
+    is_default: NotRequired[bool]
+
+
+class APIStreamDict(DefaultStreamDict):
+    stream_weekly_traffic: int | None
+
+
+class APISubscriptionDict(APIStreamDict):
+    """Similar to StreamClientDict, it should contain all the fields specified in
+    `zerver.models.Subscription.API_FIELDS` and several additional fields.
+    """
+
+    audible_notifications: bool | None
+    color: str
+    desktop_notifications: bool | None
+    email_notifications: bool | None
+    is_muted: bool
+    pin_to_top: bool
+    push_notifications: bool | None
+    wildcard_mentions_notify: bool | None
+    # Computed fields not specified in `Subscription.API_FIELDS`
+    in_home_view: bool
+    subscribers: list[int]
 
 
 @dataclass
 class SubscriptionInfo:
-    subscriptions: List[SubscriptionStreamDict]
-    unsubscribed: List[SubscriptionStreamDict]
-    never_subscribed: List[NeverSubscribedStreamDict]
+    subscriptions: list[SubscriptionStreamDict]
+    unsubscribed: list[SubscriptionStreamDict]
+    never_subscribed: list[NeverSubscribedStreamDict]
+
+
+class RealmPlaygroundDict(TypedDict):
+    id: int
+    name: str
+    pygments_language: str
+    url_template: str
+
+
+@dataclass
+class GroupPermissionSetting:
+    require_system_group: bool
+    allow_internet_group: bool
+    allow_nobody_group: bool
+    allow_everyone_group: bool
+    default_group_name: str
+    default_for_system_groups: str | None = None
+    allowed_system_groups: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ServerSupportedPermissionSettings:
+    realm: dict[str, GroupPermissionSetting]
+    stream: dict[str, GroupPermissionSetting]
+    group: dict[str, GroupPermissionSetting]
+
+
+class RawUserDict(TypedDict):
+    id: int
+    full_name: str
+    email: str
+    avatar_source: str
+    avatar_version: int
+    is_active: bool
+    role: int
+    is_billing_admin: bool
+    is_bot: bool
+    timezone: str
+    date_joined: datetime
+    bot_owner_id: int | None
+    delivery_email: str
+    bot_type: int | None
+    long_term_idle: bool
+    email_address_visibility: int
+
+
+class RemoteRealmDictValue(TypedDict):
+    can_push: bool
+    expected_end_timestamp: int | None
+
+
+class AnalyticsDataUploadLevel(IntEnum):
+    NONE = 0
+    BASIC = 1
+    BILLING = 2
+    ALL = 3

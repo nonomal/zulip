@@ -5,6 +5,9 @@ line. To help with this, Zulip ships with over 100 command-line tools
 implemented using the [Django management commands
 framework][django-management].
 
+Because management commands require server shell access, Zulip Cloud
+users will need to contact support for situations requiring them.
+
 ## Running management commands
 
 Start by logging in as the `zulip` user on the Zulip server. Then run
@@ -16,7 +19,7 @@ cd /home/zulip/deployments/current
 # Start by reading the help
 ./manage.py <command_name> --help
 
-# Once you've determine this is the command for you, run it!
+# Once you've determined this is the command for you, run it!
 ./manage.py <command_name> <args>
 ```
 
@@ -54,14 +57,14 @@ unlikely to ever need to interact with that realm.)
 Unless you are
 [hosting multiple organizations on your Zulip server](multiple-organizations.md),
 your single Zulip organization on the root domain will have the empty
-string (`''`) as its `string_id`. So you can run e.g.:
+string (`''`) as its `string_id`. So you can run, for example:
 
 ```console
 zulip@zulip:~$ /home/zulip/deployments/current/manage.py show_admins -r ''
 ```
 
 Otherwise, the `string_id` will correspond to the organization's
-subdomain. E.g. on `it.zulip.example.com`, use
+subdomain. E.g., on `it.zulip.example.com`, use
 `/home/zulip/deployments/current/manage.py show_admins -r it`.
 
 ## manage.py shell
@@ -91,12 +94,12 @@ database, for most objects, in addition to saving the changes to the
 database, one may also need to flush caches, notify the apps and open
 browser windows, and record the change in Zulip's `RealmAuditLog`
 audit history table. For almost any data change you want to do, there
-is already a function in `zerver.lib.actions.py` with a name like
+is already a function in `zerver.actions` with a name like
 `do_change_full_name` that updates that field and notifies clients
 correctly.
 
-For convenience, Zulip automatically import `zerver/models.py` and
-`zerver/lib/actions.py` into every management shell; if you need to
+For convenience, Zulip automatically imports `zerver.models`
+into every management shell; if you need to
 access other functions, you'll need to import them yourself.
 
 ## Other useful manage.py commands
@@ -125,6 +128,9 @@ There are dozens of useful management commands under
 - `./manage.py export_single_user`: does a limited version of the [main
   export tools](export-and-import.md) containing just
   the messages accessible by a single user.
+- `./manage.py unarchive_channel`:
+  [Reactivates](https://zulip.com/help/archive-a-channel#unarchiving-archived-channels)
+  an archived channel.
 - `./manage.py reactivate_realm`: Reactivates a realm.
 - `./manage.py deactivate_user`: Deactivates a user. This can be done
   more easily in Zulip's organization administrator UI.
@@ -176,10 +182,10 @@ symlinking them into
 `/home/zulip/deployments/current/zerver/management/` after each
 upgrade.
 
-[modifying-zulip]: upgrade-or-modify.md#modifying-zulip
+[modifying-zulip]: modify.md
 [writing-bots]: https://zulip.com/api/writing-bots
 [integrations]: https://zulip.com/integrations
 [zulip-api]: https://zulip.com/api/rest
 [webhook-integrations]: https://zulip.com/api/incoming-webhooks-overview
 [management-commands-dev]: ../subsystems/management-commands.md
-[django-management]: https://docs.djangoproject.com/en/3.2/ref/django-admin/#django-admin-and-manage-py
+[django-management]: https://docs.djangoproject.com/en/5.0/ref/django-admin/#django-admin-and-manage-py

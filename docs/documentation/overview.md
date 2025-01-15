@@ -31,7 +31,7 @@ These three systems are documented in detail.
 What you are reading right now is part of the collection of
 documentation targeted at developers and people running their own
 Zulip servers. These docs are written in
-[CommonMark Markdown](https://commonmark.org/) with a small bit of rST.
+[CommonMark Markdown](https://commonmark.org/).
 We've chosen Markdown because it is
 [easy to write](https://commonmark.org/help/). The source for Zulip's
 developer documentation is at `docs/` in the Zulip Git repository, and
@@ -46,7 +46,7 @@ for every pull request, accessible from a "Details" link in the
 to submit a screenshot with any pull request modifying documentation
 to help make reviews efficient.
 
-If you want to build the developer documentation locally (e.g. to test
+If you want to build the developer documentation locally (e.g., to test
 your changes), the dependencies are automatically installed as part of
 Zulip development environment provisioning, and you can build the
 documentation using:
@@ -58,11 +58,11 @@ documentation using:
 and then opening `http://127.0.0.1:9991/docs/index.html` in your
 browser. The raw files are available at
 `file:///path/to/zulip/docs/_build/html/index.html` in your browser
-(so you can also use e.g. `firefox docs/_build/html/index.html` from
-the root of your Zulip checkout).
+(so you can also use, for example, `firefox docs/_build/html/index.html`
+from the root of your Zulip checkout).
 
 If you are adding a new page to the table of contents, you will want
-to modify `docs/index.rst` and run `make clean` before `make html`, so
+to modify `docs/index.md` and run `make clean` before `make html`, so
 that other docs besides your new one also get the new entry in the
 table of contents.
 
@@ -107,7 +107,7 @@ See our guide on [writing help center articles](helpcenter.md).
 
 ### Integrations documentation
 
-Zulip's [integrations documentation](https://zulip.com/integrations)
+Zulip's [integrations documentation](https://zulip.com/integrations/)
 is user-facing documentation explaining to end users how to set up each
 of Zulip's more than 100 integrations. There is a detailed [guide on
 documenting integrations](integrations.md), including style guidelines

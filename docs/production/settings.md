@@ -1,4 +1,4 @@
-# Customize Zulip
+# Server configuration
 
 Once you've got Zulip set up, you'll likely want to configure it the
 way you like.
@@ -9,7 +9,7 @@ Most configuration can be done by a realm administrator, on the web.
 For those settings, see [the documentation for realm
 administrators][realm-admin-docs].
 
-[realm-admin-docs]: https://zulip.com/help/getting-your-organization-started-with-zulip
+[realm-admin-docs]: https://zulip.com/help/moving-to-zulip
 
 This page discusses additional configuration that a system
 administrator can do. To change any of the following settings, edit
@@ -28,13 +28,14 @@ from an old version of Zulip, we recommend [carefully updating your
 comment documentation for new configuration settings after upgrading
 to each new major release.
 
-[update-settings-docs]: upgrade-or-modify.md#updating-settingspy-inline-documentation
+[update-settings-docs]: upgrade.md#updating-settingspy-inline-documentation
 [settings-py-template]: https://github.com/zulip/zulip/blob/main/zproject/prod_settings_template.py
 
-Since Zulip's settings file is a Python script, there are a number of
-other things that one can configure that are not documented; ask in
-[the Zulip development community](https://zulip.com/development-community/)
-if there's something you'd like to do but can't figure out how to.
+Since Zulip’s settings file is a Python script, there are a number of
+other things that one can configure that are documented in
+[System and deployment configuration](system-configuration.md).
+Otherwise, ask in [the Zulip development community](https://zulip.com/development-community/)
+if there’s something you’d like to do but can’t figure out how to.
 
 ## Specific settings
 
@@ -133,4 +134,4 @@ Zulip documentation cover everything anyone might want to know about
 running Zulip in production.
 
 Next: [Backups, export and import](export-and-import.md) and
-[upgrading](upgrade-or-modify.md) Zulip in production.
+[upgrading](upgrade.md) Zulip in production.

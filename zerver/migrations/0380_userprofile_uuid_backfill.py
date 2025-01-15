@@ -1,11 +1,11 @@
 import uuid
 
 from django.db import migrations, models
-from django.db.backends.postgresql.schema import DatabaseSchemaEditor
+from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.db.migrations.state import StateApps
 
 
-def backfill_user_profile_uuid(apps: StateApps, schema_editor: DatabaseSchemaEditor) -> None:
+def backfill_user_profile_uuid(apps: StateApps, schema_editor: BaseDatabaseSchemaEditor) -> None:
     UserProfile = apps.get_model("zerver", "UserProfile")
 
     max_id = UserProfile.objects.aggregate(models.Max("id"))["id__max"]
@@ -36,5 +36,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(backfill_user_profile_uuid, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(
+            backfill_user_profile_uuid, reverse_code=migrations.RunPython.noop, elidable=True
+        ),
     ]

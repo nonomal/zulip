@@ -326,7 +326,7 @@ are sloppy, so phrases like `Partially fixes #1234` will automatically
 close the issue. Phrases like `Fixes part of #1234` are a good
 alternative.
 
-Make as many commits as you need to to address the issue or implement your feature.
+Make as many commits as you need to address the issue or implement your feature.
 
 ## Push your commits to GitHub
 
@@ -410,7 +410,7 @@ To git@github.com:christi3k/zulip.git
  ! [rejected] 1754-docs-add-git-workflow -> 1754-docs-add-git-workflow (non-fast-forward)
 error: failed to push some refs to 'git@github.com:christi3k/zulip.git'
 hint: Updates were rejected because the tip of your current branch is behind
-hint: its remote counterpart. Integrate the remote changes (e.g.
+hint: its remote counterpart. Integrate the remote changes (e.g.,
 hint: 'git pull ...') before pushing again.
 hint: See the 'Note about fast-forwards' in 'git push --help' for details.
 ```
@@ -453,5 +453,5 @@ complicated rebase.
 [how-git-is-different]: the-git-difference.md
 [self-multiple-computers]: troubleshooting.md#working-from-multiple-computers
 [zulip-git-guide-up-to-date]: #keep-your-fork-up-to-date
-[zulip-rtd-commit-discipline]: ../contributing/version-control.md#commit-discipline
-[zulip-rtd-commit-messages]: ../contributing/version-control.md#commit-messages
+[zulip-rtd-commit-discipline]: ../contributing/commit-discipline.md
+[zulip-rtd-commit-messages]: ../contributing/commit-discipline.md

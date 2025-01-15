@@ -2,12 +2,12 @@
 
 import bitfield.models
 from django.db import migrations, models
-from django.db.backends.postgresql.schema import DatabaseSchemaEditor
+from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.db.migrations.state import StateApps
 from django.db.models import F, Q
 
 
-def reset_is_private_flag(apps: StateApps, schema_editor: DatabaseSchemaEditor) -> None:
+def reset_is_private_flag(apps: StateApps, schema_editor: BaseDatabaseSchemaEditor) -> None:
     UserMessage = apps.get_model("zerver", "UserMessage")
     UserProfile = apps.get_model("zerver", "UserProfile")
     user_profile_ids = UserProfile.objects.all().order_by("id").values_list("id", flat=True)
@@ -15,10 +15,9 @@ def reset_is_private_flag(apps: StateApps, schema_editor: DatabaseSchemaEditor) 
     # zerver/migrations/0100_usermessage_remove_is_me_message.py
     # didn't clean the field after removing it.
 
-    i = 0
     total = len(user_profile_ids)
     print("Setting default values for the new flag...", flush=True)
-    for user_id in user_profile_ids:
+    for i, user_id in enumerate(user_profile_ids, 1):
         while True:
             # Ideally, we'd just do a single database query per user.
             # Unfortunately, Django doesn't use the fancy new index on
@@ -39,7 +38,6 @@ def reset_is_private_flag(apps: StateApps, schema_editor: DatabaseSchemaEditor) 
             if count < 1000:
                 break
 
-        i += 1
         if i % 50 == 0 or i == total:
             percent = round((i / total) * 100, 2)
             print(f"Processed {i}/{total} {percent}%", flush=True)

@@ -13,7 +13,7 @@ principles are important in how we think about internationalization:
   tagged for translation in both [HTML templates](#html-templates) and
   code, and our linters attempt to enforce this. There are some
   exceptions: we don't tag strings in Zulip's landing pages
-  (e.g. /features) and other documentation (e.g. /help) for
+  (e.g., /features/) and other documentation (e.g., /help/) for
   translation at this time (though we do aim for those pages to be
   usable with tools like Google Translate).
 - Translating all the strings in Zulip for a language and maintaining
@@ -34,19 +34,19 @@ This article aims to provide a brief introduction. We recommend the
 internationalization in general; we agree with essentially all of
 their style guidelines.
 
-[edx-i18n]: https://edx.readthedocs.io/projects/edx-developer-guide/en/latest/internationalization/i18n.html
+[edx-i18n]: https://docs.openedx.org/en/latest/developers/references/developer_guide/internationalization/i18n.html
 
 ## Key details about human language
 
 There are a few critical details about human language that are important
 to understand when implementing an internationalized application:
 
-- **Punctuation** varies between languages (e.g. Japanese doesn't use
+- **Punctuation** varies between languages (e.g., Japanese doesn't use
   `.`s at the end of sentences). This means that you should always
   include end-of-sentence symbols like `.` and `?` inside the
   to-be-translated strings, so that translators can correctly
   translate the content.
-- **Word order** varies between languages (e.g. some languages put
+- **Word order** varies between languages (e.g., some languages put
   subjects before verbs, others the other way around). This means
   that **concatenating translatable strings** produces broken results
   (more details with examples are below).
@@ -63,7 +63,7 @@ to understand when implementing an internationalized application:
   find your string.
 
 There's a lot of other interesting differences that are important for
-i18n (e.g. Zulip has a "full name" field rather than "first name" and
+i18n (e.g., Zulip has a "full name" field rather than "first name" and
 "last name" because different cultures order the surnames and given
 names differently), but the above issues are likely to be relevant to
 most people working on Zulip.
@@ -172,7 +172,7 @@ from django.utils.translation import gettext as _
 Zulip expects all the error messages to be translatable as well. To
 ensure this, the error message passed to `JsonableError`
 should always be a literal string enclosed by `_()`
-function, e.g.:
+function, for example:
 
 ```python
 JsonableError(_('English text'))
@@ -180,7 +180,7 @@ JsonableError(_('English text'))
 
 If you're declaring a user-facing string at top level or in a class, you need to
 use `gettext_lazy` instead, to ensure that the translation happens at
-request-processing time when Django knows what language to use, e.g.:
+request-processing time when Django knows what language to use, for example:
 
 ```python
 from zproject.backends import check_password_strength, email_belongs_to_ldap
@@ -199,7 +199,7 @@ class Realm(models.Model):
     ...
     ...
 
-    STREAM_EVENTS_NOTIFICATION_TOPIC = gettext_lazy('stream events')
+    STREAM_EVENTS_NOTIFICATION_TOPIC = gettext_lazy("channel events")
 ```
 
 To ensure we always internationalize our JSON error messages, the
@@ -239,7 +239,7 @@ $("#foo").html(
 
 The only HTML tags allowed directly in translated strings are the
 simple HTML tags enumerated in `default_html_elements`
-(`static/js/i18n.js`) with no attributes. This helps to avoid
+(`web/src/i18n.ts`) with no attributes. This helps to avoid
 exposing HTML details to translators. If you need to include more
 complex markup such as a link, you can define a custom HTML tag
 locally to the translation:
@@ -247,7 +247,7 @@ locally to the translation:
 ```js
 $t_html(
     {defaultMessage: "<b>HTML</b> linking to the <z-link>login page</z-link>"},
-    {"z-link": (content_html) => `<a href="/login/">${content_html}</a>`},
+    {"z-link": (content_html) => `<a href="/login/">${content_html.join("")}</a>`},
 )
 ```
 
@@ -258,6 +258,8 @@ Handlebars [helpers][] that Zulip registers. The syntax for simple strings is:
 
 ```html+handlebars
 {{t 'English text' }}
+
+{{t 'Block of English text with a {variable}.' }}
 ```
 
 If you are passing a translated string to a Handlebars partial, you can use:
@@ -268,17 +270,17 @@ If you are passing a translated string to a Handlebars partial, you can use:
     }}
 ```
 
-The syntax for block strings or strings containing variables is:
+The syntax for HTML strings is:
 
 <!-- The html+handlebars lexer fails to lex the single braces. -->
 
 ```text
 {{#tr}}
-    Block of English text.
+    <p>Block of English text.</p>
 {{/tr}}
 
 {{#tr}}
-    Block of English text with a {variable}.
+    <p>Block of English text with a {variable}.</p>
 {{/tr}}
 ```
 
@@ -293,7 +295,7 @@ translated block, because they don't work properly with translation.
 The Handlebars expression would be evaluated before the string is
 processed by FormatJS, so that the string to be translated wouldn't be
 constant. We have a linter to enforce that translated blocks don't
-contain handlebars.
+contain Handlebars.
 
 Restrictions on including HTML tags in translated strings are the same
 as in JavaScript. You can insert more complex markup using a local
@@ -314,18 +316,17 @@ located at `.tx/config`.
 ## Transifex CLI setup
 
 In order to be able to run `tx pull` (and `tx push` as well, if you're a
-maintainer), you have to specify your Transifex credentials in a config
-file, located at `~/.transifexrc`.
+maintainer), you have to specify your Transifex API Token, [generated in
+Transifex's web interface][transifex-api-token], in a config file located at
+`~/.transifexrc`.
 
 You can find details on how to set it up [here][transifexrc], but it should
 look similar to this (with your credentials):
 
 ```ini
 [https://www.transifex.com]
-username = user
-token =
-password = p@ssw0rd
-hostname = https://www.transifex.com
+rest_hostname = https://rest.api.transifex.com
+token = 1/abcdefg...
 ```
 
 This basically identifies you as a Transifex user, so you can access your
@@ -337,6 +338,7 @@ organizations from the command line.
 [formatjs]: https://formatjs.io/
 [icu messageformat]: https://formatjs.io/docs/intl-messageformat
 [helpers]: https://handlebarsjs.com/guide/block-helpers.html
-[transifex]: https://transifex.com
+[transifex]: https://www.transifex.com
+[transifex-api-token]: https://app.transifex.com/user/settings/api/
 [transifexrc]: https://docs.transifex.com/client/client-configuration#transifexrc
 [html-templates]: ../subsystems/html-css.md#html-templates

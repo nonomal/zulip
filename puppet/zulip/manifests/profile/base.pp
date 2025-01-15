@@ -3,8 +3,9 @@
 # This class should only be included by classes that are intended to
 # be able to be deployed on their own host.
 class zulip::profile::base {
+  include zulip::timesync
   include zulip::common
-  case $::os['family'] {
+  case $facts['os']['family'] {
     'Debian': {
       include zulip::apt_repository
     }
@@ -15,7 +16,7 @@ class zulip::profile::base {
       fail('osfamily not supported')
     }
   }
-  case $::os['family'] {
+  case $facts['os']['family'] {
     'Debian': {
       $base_packages = [
         # Basics
@@ -28,8 +29,6 @@ class zulip::profile::base {
         'procps',
         # Used to read /etc/zulip/zulip.conf for `zulipconf` Puppet function
         'crudini',
-        # Accurate time is essential
-        'ntp',
         # Used for tools like sponge
         'moreutils',
         # Nagios monitoring plugins
@@ -49,7 +48,6 @@ class zulip::profile::base {
         'curl',
         'jq',
         'crudini',
-        'ntp',
         'moreutils',
         'nmap-ncat',
         'nagios-plugins',  # there is no dummy package on CentOS 7
@@ -60,7 +58,7 @@ class zulip::profile::base {
       fail('osfamily not supported')
     }
   }
-  package { $base_packages: ensure => 'installed' }
+  package { $base_packages: ensure => installed }
 
   group { 'zulip':
     ensure => present,
@@ -76,56 +74,67 @@ class zulip::profile::base {
   }
 
   file { '/etc/zulip':
-    ensure => 'directory',
-    mode   => '0644',
+    ensure => directory,
+    mode   => '0755',
     owner  => 'zulip',
     group  => 'zulip',
-    links  => 'follow',
+    links  => follow,
   }
   file { ['/etc/zulip/zulip.conf', '/etc/zulip/settings.py']:
-    ensure  => 'file',
+    ensure  => file,
     require => File['/etc/zulip'],
     mode    => '0644',
     owner   => 'zulip',
     group   => 'zulip',
   }
   file { '/etc/zulip/zulip-secrets.conf':
-    ensure  => 'file',
+    ensure  => file,
     require => File['/etc/zulip'],
     mode    => '0640',
     owner   => 'zulip',
     group   => 'zulip',
   }
 
-  file { '/etc/security/limits.conf':
+  file { '/etc/security/limits.d/zulip.conf':
     ensure => file,
     mode   => '0640',
     owner  => 'root',
     group  => 'root',
-    source => 'puppet:///modules/zulip/limits.conf',
+    source => 'puppet:///modules/zulip/limits.d/zulip.conf',
+  }
+  file { '/etc/systemd/system.conf.d/':
+    ensure => directory,
+    mode   => '0755',
+    owner  => 'root',
+    group  => 'root',
+  }
+  file { '/etc/systemd/system.conf.d/limits.conf':
+    ensure => file,
+    mode   => '0644',
+    owner  => 'root',
+    group  => 'root',
+    source => 'puppet:///modules/zulip/systemd/system.conf.d/limits.conf',
+  }
+
+  service { 'puppet':
+    ensure  => stopped,
+    enable  => false,
+    require => Package['puppet'],
   }
 
   # This directory is written to by cron jobs for reading by Nagios
   file { '/var/lib/nagios_state/':
     ensure => directory,
     group  => 'zulip',
-    mode   => '0774',
+    mode   => '0775',
   }
 
   file { '/var/log/zulip':
-    ensure => 'directory',
+    ensure => directory,
     owner  => 'zulip',
     group  => 'zulip',
-    mode   => '0640',
+    mode   => '0750',
   }
 
-  file { "${zulip::common::nagios_plugins_dir}/zulip_base":
-    require => Package[$zulip::common::nagios_plugins],
-    recurse => true,
-    purge   => true,
-    owner   => 'root',
-    group   => 'root',
-    mode    => '0755',
-    source  => 'puppet:///modules/zulip/nagios_plugins/zulip_base',
-  }
+  zulip::nagios_plugins { 'zulip_base': }
 }

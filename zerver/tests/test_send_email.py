@@ -6,7 +6,7 @@ from django.core.mail.backends.smtp import EmailBackend as SMTPBackend
 from django.core.mail.message import sanitize_address
 
 from zerver.lib.send_email import (
-    EmailNotDeliveredException,
+    EmailNotDeliveredError,
     FromAddress,
     build_email,
     initialize_connection,
@@ -23,7 +23,7 @@ class TestBuildEmail(ZulipTestCase):
         limit_length_name = "a" * (320 - len(sanitize_address(FromAddress.NOREPLY, "utf-8")) - 3)
         mail = build_email(
             "zerver/emails/password_reset",
-            to_emails=[hamlet],
+            to_emails=[hamlet.email],
             from_name=limit_length_name,
             from_address=FromAddress.NOREPLY,
             language="en",
@@ -33,7 +33,7 @@ class TestBuildEmail(ZulipTestCase):
         # One more character makes it flip to just the address, with no name
         mail = build_email(
             "zerver/emails/password_reset",
-            to_emails=[hamlet],
+            to_emails=[hamlet.email],
             from_name=limit_length_name + "a",
             from_address=FromAddress.NOREPLY,
             language="en",
@@ -111,14 +111,14 @@ class TestSendEmail(ZulipTestCase):
         # Used to check the output
         mail = build_email(
             "zerver/emails/password_reset",
-            to_emails=[hamlet],
+            to_emails=[hamlet.email],
             from_name=from_name,
             from_address=address,
             language="en",
         )
         self.assertEqual(mail.extra_headers["From"], f"{from_name} <{FromAddress.NOREPLY}>")
 
-        # We test the cases that should raise an EmailNotDeliveredException
+        # We test the cases that should raise an EmailNotDeliveredError
         errors = {
             f"Unknown error sending password_reset email to {mail.to}": [0],
             f"Error sending password_reset email to {mail.to}": [SMTPException()],
@@ -132,15 +132,17 @@ class TestSendEmail(ZulipTestCase):
 
         for message, side_effect in errors.items():
             with mock.patch.object(EmailBackend, "send_messages", side_effect=side_effect):
-                with self.assertLogs(logger=logger) as info_log:
-                    with self.assertRaises(EmailNotDeliveredException):
-                        send_email(
-                            "zerver/emails/password_reset",
-                            to_emails=[hamlet],
-                            from_name=from_name,
-                            from_address=FromAddress.NOREPLY,
-                            language="en",
-                        )
+                with (
+                    self.assertLogs(logger=logger) as info_log,
+                    self.assertRaises(EmailNotDeliveredError),
+                ):
+                    send_email(
+                        "zerver/emails/password_reset",
+                        to_emails=[hamlet.email],
+                        from_name=from_name,
+                        from_address=FromAddress.NOREPLY,
+                        language="en",
+                    )
                 self.assert_length(info_log.records, 2)
                 self.assertEqual(
                     info_log.output[0],
@@ -151,20 +153,33 @@ class TestSendEmail(ZulipTestCase):
     def test_send_email_config_error_logging(self) -> None:
         hamlet = self.example_user("hamlet")
 
-        with self.settings(EMAIL_HOST_USER="test", EMAIL_HOST_PASSWORD=None):
-            with self.assertLogs(logger=logger, level="ERROR") as error_log:
-                send_email(
-                    "zerver/emails/password_reset",
-                    to_emails=[hamlet],
-                    from_name="From Name",
-                    from_address=FromAddress.NOREPLY,
-                    language="en",
-                )
+        with (
+            self.settings(EMAIL_HOST_USER="test", EMAIL_HOST_PASSWORD=None),
+            self.assertLogs(logger=logger, level="ERROR") as error_log,
+        ):
+            send_email(
+                "zerver/emails/password_reset",
+                to_emails=[hamlet.email],
+                from_name="From Name",
+                from_address=FromAddress.NOREPLY,
+                language="en",
+            )
 
         self.assertEqual(
             error_log.output,
             [
                 "ERROR:zulip.send_email:"
-                "An SMTP username was set (EMAIL_HOST_USER), but password is unset (EMAIL_HOST_PASSWORD)."
+                "An SMTP username was set (EMAIL_HOST_USER), but password is unset (EMAIL_HOST_PASSWORD).  "
+                "To disable SMTP authentication, set EMAIL_HOST_USER to an empty string."
             ],
         )
+
+        # Empty string is OK
+        with self.settings(EMAIL_HOST_USER="test", EMAIL_HOST_PASSWORD=""):
+            send_email(
+                "zerver/emails/password_reset",
+                to_emails=[hamlet.email],
+                from_name="From Name",
+                from_address=FromAddress.NOREPLY,
+                language="en",
+            )

@@ -1,6 +1,6 @@
-from datetime import datetime
+import zoneinfo
+from datetime import datetime, timezone
 
-import pytz
 from django.utils.timezone import now as timezone_now
 
 from zerver.lib.test_classes import ZulipTestCase
@@ -30,12 +30,16 @@ class TimeZoneTest(ZulipTestCase):
         assert not missing, missing
 
         now = timezone_now()
-        dates = [datetime(now.year, 6, 21), datetime(now.year, 12, 21)]
+        dates = [
+            datetime(now.year, 6, 21, tzinfo=timezone.utc),
+            datetime(now.year, 12, 21, tzinfo=timezone.utc),
+        ]
         extra = {*common_timezones.items(), *ambiguous_abbrevs}
-        for name in pytz.all_timezones:
-            tz = pytz.timezone(name)
+        for name in zoneinfo.available_timezones():
+            tz = zoneinfo.ZoneInfo(name)
             for date in dates:
                 abbrev = tz.tzname(date)
+                assert abbrev is not None
                 if abbrev.startswith(("-", "+")):
                     continue
                 delta = tz.utcoffset(date)

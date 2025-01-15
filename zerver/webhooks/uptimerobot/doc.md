@@ -1,41 +1,42 @@
+# Zulip UptimeRobot integration
+
 Receive Zulip notifications from UptimeRobot!
 
-1. {!create-stream.md!}
+{start_tabs}
 
-1. {!create-a-bot-indented.md!}
+1. {!create-an-incoming-webhook.md!}
 
-    Construct the URL for the {{ integration_display_name }}
-    bot using the bot's API key and the desired stream name:
+1. {!generate-webhook-url-basic.md!}
 
-    `{{ api_url }}{{ integration_url }}?api_key=abcdefgh&stream=stream%20name&`
+1. On UptimeRobot, go to **My Settings**, and select **Add Alert Contact**.
 
-    Modify the parameters of the URL above, where `api_key` is the API key
-    of your Zulip bot, and `stream` is the URL-encoded stream name you want the
-    notifications sent to. If you do not specify a `stream`, the bot will
-    send notifications via PMs to the creator of the bot.
+1. Set **Alert Contact Type** to **webhook**, set **Friendly Name** to
+   a name of your choice, such as `Zulip`, and set **URL to notify** to the
+   URL generated above.
 
-1. On UptimeRobot, go to **My Settings** and select **Add Alert Contact**.
-   Set **Alert Contact Type** to **webhook**.
+1. Under **POST Value (JSON Format)**, select **Send as JSON (application/json)**,
+   and then set the value to:
 
-1. Set **Friendly Name** to a name of your choice, such as `Zulip`. Set **URL to notify** to the
-   URL constructed above. Under **POST Value (JSON Format)**, select **Send as JSON (application/json)**.
+         {
+            "monitor_url":"*monitorURL*",
+            "monitor_friendly_name":"*monitorFriendlyName*",
+            "alert_type":"*alertType*",
+            "alert_type_friendly_name":"*alertTypeFriendlyName*",
+            "alert_details":"*alertDetails*",
+            "alert_friendly_duration":"*alertFriendlyDuration*"
+         }
 
-1. Set **POST Value(JSON Format)** to:
+1. Set **Enable Notifications For** the [events](#filtering-incoming-events)
+   you'd like to be notified about, and save the form.
 
-      ```
-      {
-         "monitor_url":"*monitorURL*",
-         "monitor_friendly_name":"*monitorFriendlyName*",
-         "alert_type":"*alertType*",
-         "alert_type_friendly_name":"*alertTypeFriendlyName*",
-         "alert_details":"*alertDetails*",
-         "alert_friendly_duration":"*alertFriendlyDuration*"
-      }
-      ```
-
-1. Set **Enable Notifications For** to whichever events you want to notify on.
-   Save the form.
+{end_tabs}
 
 {!congrats.md!}
 
 ![](/static/images/integrations/uptimerobot/001.png)
+
+{!event-filtering-additional-feature.md!}
+
+### Related documentation
+
+{!webhooks-url-specification.md!}

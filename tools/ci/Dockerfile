@@ -4,9 +4,9 @@
 #    because by then we've already cloned the repo);
 #  * Git and other basic utilities.
 
-# To rebuild from this file for a given release, say Ubuntu 20.04 focal:
-#   docker build . --build-arg=BASE_IMAGE=ubuntu:20.04 --pull --tag=zulip/ci:focal
-#   docker push zulip/ci:focal
+# To rebuild from this file for a given release, say Ubuntu 22.04 jammy:
+#   docker build . --build-arg=BASE_IMAGE=ubuntu:22.04 --pull --tag=zulip/ci:jammy
+#   docker push zulip/ci:jammy
 #
 # tools/ci/build-docker-images will rebuild all images, but not push them.
 
@@ -42,7 +42,9 @@ RUN apt-get update \
     puppet \
     python3-dev \
     python3-pip \
-    rabbitmq-server \
+# We do not pre-install rabbitmq-server, as doing so fixes the
+# nodename to be the current hostname, which varies.  Letting Zulip
+# install rabbitmq allows it to fix the nodename to 'localhost'.
     redis-server \
     sudo \
     supervisor \

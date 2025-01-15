@@ -8,7 +8,7 @@ import sys
 import time
 from importlib import import_module
 from io import StringIO
-from typing import Any, List, Set
+from typing import Any
 
 from django.apps import apps
 from django.conf import settings
@@ -26,10 +26,12 @@ from scripts.lib.zulip_tools import (
     write_new_digest,
 )
 
+BACKEND_DATABASE_TEMPLATE = "zulip_test_template"
 UUID_VAR_DIR = get_dev_uuid_var_path()
 
 IMPORTANT_FILES = [
     "zilencer/management/commands/populate_db.py",
+    "zerver/actions/create_realm.py",
     "zerver/lib/bulk_create.py",
     "zerver/lib/generate_test_data.py",
     "zerver/lib/server_initialization.py",
@@ -58,7 +60,7 @@ VERBOSE_MESSAGE_ABOUT_HASH_TRANSITION = """
 """
 
 
-def migration_paths() -> List[str]:
+def migration_paths() -> list[str]:
     return [
         *glob.glob("*/migrations/*.py"),
         "requirements/dev.txt",
@@ -66,7 +68,7 @@ def migration_paths() -> List[str]:
 
 
 class Database:
-    def __init__(self, platform: str, database_name: str, settings: str):
+    def __init__(self, platform: str, database_name: str, settings: str) -> None:
         self.database_name = database_name
         self.settings = settings
         self.digest_name = "db_files_hash_for_" + platform
@@ -77,7 +79,7 @@ class Database:
         )
         self.migration_digest_file = "migrations_hash_" + database_name
 
-    def important_settings(self) -> List[str]:
+    def important_settings(self) -> list[str]:
         def get(setting_name: str) -> str:
             value = getattr(settings, setting_name, {})
             return json.dumps(value, sort_keys=True)
@@ -103,9 +105,16 @@ class Database:
             "./manage.py",
         ]
 
-        run([*manage_py, "migrate", "--no-input"])
+        run([*manage_py, "migrate", "--skip-checks", "--no-input"])
 
-        run([*manage_py, "get_migration_status", "--output=" + self.migration_status_file])
+        run(
+            [
+                *manage_py,
+                "get_migration_status",
+                "--skip-checks",
+                "--output=" + self.migration_status_file,
+            ]
+        )
 
     def what_to_do_with_migrations(self) -> str:
         status_fn = self.migration_status_path
@@ -307,6 +316,7 @@ def get_migration_status(**options: Any) -> str:
         no_color=options.get("no_color", False),
         settings=options.get("settings", os.environ["DJANGO_SETTINGS_MODULE"]),
         stdout=out,
+        skip_checks=options.get("skip_checks", True),
         traceback=options.get("traceback", True),
         verbosity=verbosity,
     )
@@ -316,7 +326,7 @@ def get_migration_status(**options: Any) -> str:
     return re.sub(r"\x1b\[(1|0)m", "", output)
 
 
-def extract_migrations_as_list(migration_status: str) -> List[str]:
+def extract_migrations_as_list(migration_status: str) -> list[str]:
     MIGRATIONS_RE = re.compile(r"\[[X| ]\] (\d+_.+)\n")
     return MIGRATIONS_RE.findall(migration_status)
 
@@ -337,7 +347,7 @@ def destroy_leaked_test_databases(expiry_time: int = 60 * 60) -> int:
     while also ensuring we will eventually delete all leaked databases.
     """
     files = glob.glob(os.path.join(UUID_VAR_DIR, TEMPLATE_DATABASE_DIR, "*"))
-    test_databases: Set[str] = set()
+    test_databases: set[str] = set()
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT datname FROM pg_database;")
@@ -348,12 +358,11 @@ def destroy_leaked_test_databases(expiry_time: int = 60 * 60) -> int:
     except ProgrammingError:
         pass
 
-    databases_in_use: Set[str] = set()
+    databases_in_use: set[str] = set()
     for file in files:
         if round(time.time()) - os.path.getmtime(file) < expiry_time:
             with open(file) as f:
-                for line in f:
-                    databases_in_use.add(f"zulip_test_template_{line}".rstrip())
+                databases_in_use.update(f"zulip_test_template_{line}".rstrip() for line in f)
         else:
             # Any test-backend run older than expiry_time can be
             # cleaned up, both the database and the file listing its
@@ -413,7 +422,7 @@ def reset_zulip_test_database() -> None:
 
     destroy_test_databases()
     # Pointing default database to test database template, so we can instantly clone it.
-    settings.DATABASES["default"]["NAME"] = settings.BACKEND_DATABASE_TEMPLATE
+    settings.DATABASES["default"]["NAME"] = BACKEND_DATABASE_TEMPLATE
     connection = connections["default"]
     clone_database_suffix = "clone"
     connection.creation.clone_test_db(

@@ -1,15 +1,15 @@
 import time
-from typing import List, Optional
+from typing import Any, TypedDict
 
 import orjson
 from django.db import migrations, transaction
-from django.db.backends.postgresql.schema import DatabaseSchemaEditor
+from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.db.migrations.state import StateApps
-from django.db.models import Min, Model
-from typing_extensions import TypedDict
+from django.db.models import Min
 
 BATCH_SIZE = 10000
 STREAM = 2
+
 
 # Legacy TypedDict has "prev_topic" field for any edit_history entries that
 # were saved to the database after the legacy "prev_subject" field stopped
@@ -21,24 +21,26 @@ class LegacyEditHistoryEvent(TypedDict, total=False):
     prev_subject: str
     prev_topic: str
     prev_content: str
-    prev_rendered_content: Optional[str]
-    prev_rendered_content_version: Optional[int]
+    prev_rendered_content: str | None
+    prev_rendered_content_version: int | None
 
 
 class EditHistoryEvent(TypedDict, total=False):
-    user_id: Optional[int]
+    user_id: int | None
     timestamp: int
     prev_stream: int
     stream: int
     prev_topic: str
     topic: str
     prev_content: str
-    prev_rendered_content: Optional[str]
-    prev_rendered_content_version: Optional[int]
+    prev_rendered_content: str | None
+    prev_rendered_content_version: int | None
 
 
 @transaction.atomic
-def backfill_message_edit_history_chunk(first_id: int, last_id: int, message_model: Model) -> None:
+def backfill_message_edit_history_chunk(
+    first_id: int, last_id: int, message_model: type[Any]
+) -> None:
     """
     Migrate edit history events for the messages in the provided range to:
     * Rename prev_subject => prev_topic.
@@ -59,12 +61,12 @@ def backfill_message_edit_history_chunk(first_id: int, last_id: int, message_mod
     )
 
     for message in messages:
-        legacy_edit_history: List[LegacyEditHistoryEvent] = orjson.loads(message.edit_history)
-        message_type = message.recipient.type
-        modern_edit_history: List[EditHistoryEvent] = []
+        legacy_edit_history: list[LegacyEditHistoryEvent] = orjson.loads(message.edit_history)
+        recipient_type = message.recipient.type
+        modern_edit_history: list[EditHistoryEvent] = []
 
         # Only Stream messages have topic / stream edit history data.
-        if message_type == STREAM:
+        if recipient_type == STREAM:
             topic = message.subject
             stream_id = message.recipient.type_id
 
@@ -81,7 +83,7 @@ def backfill_message_edit_history_chunk(first_id: int, last_id: int, message_mod
                     "prev_rendered_content_version"
                 ]
 
-            if message_type == STREAM:
+            if recipient_type == STREAM:
                 if "prev_subject" in edit_history_event:
                     # Add topic edit key/value pairs from legacy format.
                     modern_entry["topic"] = topic
@@ -117,7 +119,7 @@ def backfill_message_edit_history_chunk(first_id: int, last_id: int, message_mod
 
 
 def copy_and_update_message_edit_history(
-    apps: StateApps, schema_editor: DatabaseSchemaEditor
+    apps: StateApps, schema_editor: BaseDatabaseSchemaEditor
 ) -> None:
     Message = apps.get_model("zerver", "Message")
     ArchivedMessage = apps.get_model("zerver", "ArchivedMessage")
@@ -162,5 +164,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             copy_and_update_message_edit_history,
             reverse_code=migrations.RunPython.noop,
+            elidable=True,
         ),
     ]

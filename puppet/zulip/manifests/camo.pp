@@ -3,7 +3,7 @@ class zulip::camo (String $listen_address = '0.0.0.0') {
   # can be removed once one must have upgraded through Zulip 5.0 or
   # higher to get to the next release.
   package { 'camo':
-    ensure => 'purged',
+    ensure => purged,
   }
 
   $version = $zulip::common::versions['go-camo']['version']
@@ -15,6 +15,8 @@ class zulip::camo (String $listen_address = '0.0.0.0') {
     version        => $version,
     url            => "https://github.com/cactus/go-camo/releases/download/v${version}/go-camo-${version}.go${goversion}.linux-${zulip::common::goarch}.tar.gz",
     tarball_prefix => "go-camo-${version}",
+    bin            => [$bin],
+    cleanup_after  => [Service[supervisor]],
   }
 
   # We would like to not waste resources by going through Smokescreen,
@@ -45,7 +47,7 @@ class zulip::camo (String $listen_address = '0.0.0.0') {
     require => [
       Package['camo'],
       Package[supervisor],
-      Zulip::External_Dep['go-camo'],
+      File[$bin],
       File['/usr/local/bin/secret-env-wrapper'],
     ],
     owner   => 'root',

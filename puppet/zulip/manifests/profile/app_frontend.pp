@@ -10,7 +10,7 @@ class zulip::profile::app_frontend {
   } else {
     $nginx_listen_port = zulipconf('application_server', 'nginx_listen_port', 443)
   }
-  $ssl_dir = $::os['family'] ? {
+  $ssl_dir = $facts['os']['family'] ? {
     'Debian' => '/etc/ssl',
     'RedHat' => '/etc/pki/tls',
   }
@@ -23,15 +23,8 @@ class zulip::profile::app_frontend {
     content => template('zulip/nginx/zulip-enterprise.template.erb'),
     notify  => Service['nginx'],
   }
-  file { '/etc/logrotate.d/zulip':
-    ensure => file,
-    owner  => 'root',
-    group  => 'root',
-    mode   => '0644',
-    source => 'puppet:///modules/zulip/logrotate/zulip',
-  }
   file { '/etc/nginx/sites-enabled/zulip-enterprise':
-    ensure  => 'link',
+    ensure  => link,
     require => Package[$zulip::common::nginx],
     target  => '/etc/nginx/sites-available/zulip-enterprise',
     notify  => Service['nginx'],
@@ -60,17 +53,23 @@ class zulip::profile::app_frontend {
     source  => 'puppet:///modules/zulip/letsencrypt/nginx-deploy-hook.sh',
     require => Package[certbot],
   }
-  exec { 'fix-standalone-certbot':
-    onlyif  => 'test -d /etc/letsencrypt/renewal && grep -qx "authenticator = standalone" /etc/letsencrypt/renewal/*.conf',
-    command => "${::zulip_scripts_path}/lib/fix-standalone-certbot",
+  if ! $nginx_http_only {
+    exec { 'fix-standalone-certbot':
+      onlyif  => @(EOT),
+        test -L /etc/ssl/certs/zulip.combined-chain.crt &&
+        readlink /etc/ssl/certs/zulip.combined-chain.crt | grep -q /etc/letsencrypt/live/ &&
+        test -d /etc/letsencrypt/renewal &&
+        grep -qx "authenticator = standalone" /etc/letsencrypt/renewal/*.conf
+        | EOT
+      command => "${facts['zulip_scripts_path']}/lib/fix-standalone-certbot",
+    }
   }
 
   # Restart the server regularly to avoid potential memory leak problems.
-  file { '/etc/cron.d/restart-zulip':
-    ensure => file,
-    owner  => 'root',
-    group  => 'root',
-    mode   => '0644',
-    source => 'puppet:///modules/zulip/cron.d/restart-zulip',
+  zulip::cron { 'restart-zulip':
+    hour    => '6',
+    minute  => '0',
+    dow     => '0',
+    command => '/home/zulip/deployments/current/scripts/restart-server --fill-cache',
   }
 }
